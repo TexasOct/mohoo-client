@@ -2,7 +2,7 @@ mod operation;
 #[macro_use]
 extern crate rocket;
 use std::{net::IpAddr, str::FromStr};
-use operation::{init_ap, DEVICE, raw2str};
+use operation::{DEVICE, raw2str};
 use rocket::serde::{json::Json, Serialize, Deserialize};
 use serde_json;
 
@@ -98,22 +98,7 @@ fn gen_new_keypair() -> Json<KeyPairConfig> {
 #[post("/update/reload")]
 fn reload_config() -> &'static str {
     unsafe {
-        DEVICE.start_device()
-    }
-
-    match init_ap("test", "test1") {
-        Ok(_) => {
-            let value;
-            unsafe {
-                value = DEVICE.get_existing_value()
-            }
-            std::fs::write(
-                "./",
-                serde_json::to_string_pretty(&value).unwrap())
-                .unwrap();
-            "success!"
-        },
-        Err(_) => "failed"
+        DEVICE.overwrite_config()
     }
 }
 
@@ -139,13 +124,15 @@ fn rocket() -> _ {
                     data["peer_ssid"].to_string());
                 DEVICE.update_peer_passwd(
                     data["peer_passwd"].to_string());
-                DEVICE.start_device();
+                DEVICE.start_wireguard_device();
+                DEVICE.init_ap().unwrap()
             }
         }
         Err(e) => {
             println!("with error: {}, use default settings", e);
             unsafe {
-                DEVICE.start_device()
+                DEVICE.start_wireguard_device();
+                DEVICE.init_ap().unwrap()
             }
         }
     }

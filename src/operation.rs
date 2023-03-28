@@ -44,31 +44,6 @@ fn boot_wireguard_device(
         .apply(&"mosquitto-wg".parse().unwrap(), Backend::Kernel)
 }
 
-pub fn init_ap(ssid: &str, key: &str) -> Result<(), Box<dyn Error>> {
-    let mut uci = Uci::new()?;
-    uci.set("firewall.@zone[1].network", "wwan")?;
-    uci.commit("firewall")?;
-    Command::new("/etc/init.d/firewall").arg("restart");
-
-    uci.set("network.lan.ipaddr", "192.168.2.1")?;
-    uci.set("network.wwan", "interface")?;
-    uci.set("network.wwan.proto", "dhcp")?;
-    uci.commit("network")?;
-    Command::new("/etc/init.d/network").arg("restart");
-
-    uci.set("wireless.wwan", "wifi-iface")?;
-    uci.set("wireless.wwan.device", "radio0")?;
-    uci.set("wireless.wwan.network", "wlan")?;
-    uci.set("wireless.wwan.mode", "sta")?;
-    uci.set("wireless.wwan.encryption", "none")?;
-    uci.set("wireless.wwan.key", key)?;
-    uci.set("wireless.wwan.ssid", ssid)?;
-    uci.commit("wireless")?;
-    Command::new("wifi").arg("reload");
-
-    Ok(())
-}
-
 fn str2raw(key: String) -> [u8; 32] {
     let mut raw = [0; 32];
     if key.len() > 32 || key.len() == 0 {
@@ -139,7 +114,32 @@ impl Peer {
             Key::from_raw(str2raw(private_key)));
     }
 
-    pub fn start_device(&self) {
+    pub fn init_ap(&self) -> Result<(), Box<dyn Error>> {
+        let mut uci = Uci::new()?;
+        uci.set("firewall.@zone[1].network", "wwan")?;
+        uci.commit("firewall")?;
+        Command::new("/etc/init.d/firewall").arg("restart");
+
+        uci.set("network.lan.ipaddr", "192.168.2.1")?;
+        uci.set("network.wwan", "interface")?;
+        uci.set("network.wwan.proto", "dhcp")?;
+        uci.commit("network")?;
+        Command::new("/etc/init.d/network").arg("restart");
+
+        uci.set("wireless.wwan", "wifi-iface")?;
+        uci.set("wireless.wwan.device", "radio0")?;
+        uci.set("wireless.wwan.network", "wlan")?;
+        uci.set("wireless.wwan.mode", "sta")?;
+        uci.set("wireless.wwan.encryption", "none")?;
+        uci.set("wireless.wwan.key", &self.peer_passwd)?;
+        uci.set("wireless.wwan.ssid", &self.peer_ssid)?;
+        uci.commit("wireless")?;
+        Command::new("wifi").arg("reload");
+
+        Ok(())
+    }
+
+    pub fn start_wireguard_device(&self) {
         delete_interface(&"mosquitto-wg".parse().unwrap()).expect("No wireguard Interface!");
         boot_wireguard_device(
             &self.peer_ip,
@@ -148,7 +148,7 @@ impl Peer {
             &self.server_pubkey,
         )
             .expect("Failed to build device!");
-        init_ap(&self.peer_ssid, &self.peer_passwd).expect("Failed to start ap!");
+        // init_ap(&self.peer_ssid, &self.peer_passwd).expect("Failed to start ap!");
         println!("update wireguard device success!")
     }
 
@@ -165,9 +165,23 @@ impl Peer {
     }*/
 
     /// Rewrite the config file
-    // pub fn overwrite_config(&self) {
-    //     /*TODO*/
-    // }
+    pub fn overwrite_config(&self) -> &'static str {
+        self.start_wireguard_device();
+        match self.init_ap() {
+            Ok(_) => {
+                let value;
+                unsafe {
+                    value = DEVICE.get_existing_value()
+                }
+                std::fs::write(
+                    "./",
+                    serde_json::to_string_pretty(&value).unwrap())
+                    .unwrap();
+                "success!"
+            },
+            Err(_) => "failed"
+        }
+    }
 
     /// read value from ram
     pub fn get_existing_value(&self) -> Value {
