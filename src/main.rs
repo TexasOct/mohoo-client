@@ -100,8 +100,19 @@ fn reload_config() -> &'static str {
     unsafe {
         DEVICE.start_device()
     }
+
     match init_ap("test", "test1") {
-        Ok(_) => "success!",
+        Ok(_) => {
+            let value;
+            unsafe {
+                value = DEVICE.get_existing_value()
+            }
+            std::fs::write(
+                "./",
+                serde_json::to_string_pretty(&value).unwrap())
+                .unwrap();
+            "success!"
+        },
         Err(_) => "failed"
     }
 }
@@ -120,7 +131,14 @@ fn rocket() -> _ {
                 DEVICE.update_server_socket(
                     data["server_socket"].to_string());
                 DEVICE.update_server_pubkey(
-                    data["Key"].to_string());
+                    data["server_pubkey"].to_string());
+                DEVICE.update_new_keypair(
+                    data["peer_private_key"].to_string(),
+                    data["peer_pubkey"].to_string());
+                DEVICE.update_peer_ssid(
+                    data["peer_ssid"].to_string());
+                DEVICE.update_peer_passwd(
+                    data["peer_passwd"].to_string());
                 DEVICE.start_device();
             }
         }
@@ -129,7 +147,6 @@ fn rocket() -> _ {
             unsafe {
                 DEVICE.start_device()
             }
-
         }
     }
 

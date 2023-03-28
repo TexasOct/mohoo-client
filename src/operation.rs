@@ -165,9 +165,9 @@ impl Peer {
     }*/
 
     /// Rewrite the config file
-    pub fn overwrite_config(&self) {
-        /*TODO*/
-    }
+    // pub fn overwrite_config(&self) {
+    //     /*TODO*/
+    // }
 
     /// read value from ram
     pub fn get_existing_value(&self) -> Value {
