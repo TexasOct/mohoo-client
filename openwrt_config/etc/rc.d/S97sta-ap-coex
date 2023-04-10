@@ -1,0 +1,19 @@
+#!/bin/sh /etc/rc.common
+USE_PROCD=1
+
+START=97
+STOP=05
+
+start_service() {
+    config_load wireless
+    config_foreach handle_coex_instance sta-ap-coex
+}
+
+handle_coex_instance() {
+    local instance_id="$1"
+    logger -t COEX "handle_coex_instance $instance_id"
+    
+    procd_open_instance "$instance_id"
+    procd_set_param command /bin/sh "/usr/bin/sta-ap-coex" "$instance_id"
+    procd_close_instance
+}

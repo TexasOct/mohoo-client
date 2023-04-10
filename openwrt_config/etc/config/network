@@ -1,0 +1,61 @@
+config interface 'loopback'
+	option device 'lo'
+	option proto 'static'
+	option ipaddr '127.0.0.1'
+	option netmask '255.0.0.0'
+
+config globals 'globals'
+
+config device
+	option name 'br-lan'
+	option type 'bridge'
+	list ports 'eth0.1'
+
+config interface 'lan'
+	option device 'br-lan'
+	option proto 'static'
+	option ipaddr '192.168.81.1'
+	option netmask '255.255.255.0'
+	option ip6assign '60'
+
+config device
+	option name 'eth0.2'
+	option macaddr '20:28:18:a2:6f:0f'
+
+config interface 'wan'
+	option device 'eth0.2'
+	option proto 'dhcp'
+
+config switch
+	option name 'switch0'
+	option reset '1'
+	option enable_vlan '1'
+
+config switch_vlan
+	option device 'switch0'
+	option vlan '1'
+	option ports '4 6t'
+
+config switch_vlan
+	option device 'switch0'
+	option vlan '2'
+	option ports '0 6t'
+
+config interface 'mohoo'
+	option proto 'wireguard'
+	option private_key 'oN6aex0nJtLNTPA/WZG8Z0yOIEFJ555JPUrwz7RkmkA='
+	list addresses '10.20.93.253'
+	option auto '0'
+
+config wireguard_mohoo 'wgserver'
+	option route_allowed_ips '1'
+	option persistent_keepalive '25'
+	option endpoint_host '223.129.127.10'
+	option endpoint_port '53'
+	option public_key 'tjJXdU4ritnxYMhP7piKr1IsgiajLQymt3PyAaXtRCE='
+	list allowed_ips '0.0.0.0/0'
+
+config interface 'sta0'
+	option proto 'dhcp'
+	option device 'sta0'
+	option ip4table '72'

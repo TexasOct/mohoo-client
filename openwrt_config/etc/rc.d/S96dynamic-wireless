@@ -1,0 +1,4 @@
+#!/bin/sh
+
+mkdir -p /var/run/dyn_conf
+cp /etc/config/wireless.dynamic /var/run/dyn_conf/wireless
