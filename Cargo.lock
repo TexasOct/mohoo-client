@@ -718,7 +718,7 @@ dependencies = [
 
 [[package]]
 name = "mohoo-cli"
-version = "0.6.1"
+version = "0.6.2"
 dependencies = [
  "once_cell",
  "rocket",
