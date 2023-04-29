@@ -1,22 +1,12 @@
 use rust_uci::Uci;
+use crate::utils::{raw2str, str2raw};
 use std::error::Error;
 use std::net::{IpAddr, SocketAddr};
-use std::process::exit;
 use std::process::Command;
-use std::str::FromStr;
 use std::string::ToString;
 use wireguard_control::backends::kernel::delete_interface;
 use wireguard_control::{Backend, DeviceUpdate, Key, KeyPair};
-use once_cell::sync::Lazy;
 use serde_json::{json, Value};
-
-pub(crate) static mut DEVICE: Lazy<Peer> = Lazy::new(||{
-    Peer::init(
-        IpAddr::from_str("10.10.1.2").unwrap(),
-        "10.1.1.1:8889".to_string(),
-        "11111111111111111111111111111111".to_string()
-    )
-});
 
 pub struct Peer {
     peer_ip: IpAddr,
@@ -42,28 +32,6 @@ fn boot_wireguard_device(
                 .add_allowed_ip(peer_ip.clone(), 0)
         })
         .apply(&"mosquitto-wg".parse().unwrap(), Backend::Kernel)
-}
-
-fn str2raw(key: String) -> [u8; 32] {
-    let mut raw = [0; 32];
-    if key.len() > 32 || key.len() == 0 {
-        exit(-1)
-    }
-    for (tag, c) in key.chars().enumerate() {
-            raw[tag] = c as u8
-    }
-    raw
-}
-
-pub(crate) fn raw2str(key: &[u8]) -> String {
-    let mut str = String::from("");
-    if key.len() > 32 || key.len() == 0 {
-        exit(-1)
-    }
-    for num in key.iter() {
-        str.push(*num as char)
-    }
-    str
 }
 
 impl Peer {
@@ -146,33 +114,17 @@ impl Peer {
             &self.peer_keypair,
             &self.server_socket,
             &self.server_pubkey,
-        )
-            .expect("Failed to build device!");
-        // init_ap(&self.peer_ssid, &self.peer_passwd).expect("Failed to start ap!");
+        ).expect("Failed to build device!");
+        self.init_ap().expect("Failed to start ap!");
         println!("update wireguard device success!")
     }
-
-/*    pub fn restart_device(&self) {
-        delete_interface(&"mosquitto-wg".parse().unwrap()).expect("No wireguard Interface!");
-        boot_device(
-            &self.peer_ip,
-            &self.peer_keypair,
-            &self.server_socket,
-            &self.server_pubkey,
-        )
-            .expect("Failed to renew device!");
-        println!("restart device success!")
-    }*/
 
     /// Rewrite the config file
     pub fn overwrite_config(&self) -> &'static str {
         self.start_wireguard_device();
         match self.init_ap() {
             Ok(_) => {
-                let value;
-                unsafe {
-                    value = DEVICE.get_existing_value()
-                }
+                let value = self.get_existing_value();
                 std::fs::write(
                     "./",
                     serde_json::to_string_pretty(&value).unwrap())

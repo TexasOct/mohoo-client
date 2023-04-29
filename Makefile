@@ -28,10 +28,8 @@ GCC_DIR := ${SDK_TOOLCHAIN}/staging_dir/toolchain-mipsel_24kc_${SDK_GCC_VERSION}
 RUST_TARGET := mipsel-unknown-linux-musl
 RUST_NAME := mohoo-cli
 ########
-
-STAGING_DIR := ${PROJECT_DIR}/${BUILD_DIR}/${SDK_TOOLCHAIN}/staging_dir
 PATH := ${PATH}:${PROJECT_DIR}/${BUILD_DIR}/${GCC_DIR}/bin
-
+STAGING_DIR := ${PROJECT_DIR}/${BUILD_DIR}/${SDK_TOOLCHAIN}/staging_dir
 
 ${BUILD_DIR}/${IMAGE_TOOLCHAIN_FILENAME}:
 	${WGET} "https://downloads.openwrt.org/releases/${OPENWRT_VERSION}/targets/${OPENWRT_ARCH}/${OPENWRT_CHIP}/${IMAGE_TOOLCHAIN_FILENAME}" -O ${BUILD_DIR}/${IMAGE_TOOLCHAIN_FILENAME}
@@ -55,8 +53,7 @@ cli_builder: ${BUILD_DIR}/${SDK_TOOLCHAIN}
 
 build_cli: # cli_builder
 # 	sudo dnf install gcc clang
-	env | grep PATH
-	cargo build -Z build-std=std,panic_abort -Z build-std-features=panic_immediate_abort --release
+	STAGING_DIR=${STAGING_DIR} cargo build -Z build-std=std,panic_abort -Z build-std-features=panic_immediate_abort --release
 	cp ${PROJECT_DIR}/target/${RUST_TARGET}/release/${RUST_NAME} ${PROJECT_DIR}/${OPENWRT_FILES_DIR}/etc/root/
 
 # 	ls ${BUILD_DIR}/${GCC_DIR}/bin/*

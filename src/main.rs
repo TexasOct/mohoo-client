@@ -1,10 +1,20 @@
 mod operation;
-#[macro_use]
-extern crate rocket;
+mod utils;
+#[macro_use] extern crate rocket;
 use std::{net::IpAddr, str::FromStr};
-use operation::{DEVICE, raw2str};
+use operation::Peer;
 use rocket::serde::{json::Json, Serialize, Deserialize};
+use once_cell::sync::Lazy;
 use serde_json;
+use utils::raw2str;
+
+static mut DEVICE: Lazy<Peer> = Lazy::new(||{
+    Peer::init(
+        IpAddr::from_str("10.10.1.2").unwrap(),
+        "223.129.127.2".to_string(),
+        "L9pVwwThBs1gGczwGsgUFXROFUkyTFoXEVp5MBkBbkc=".to_string()
+    )
+});
 
 #[get("/")]
 fn index() -> &'static str {
@@ -39,8 +49,7 @@ fn get_config() -> Json<Config> {
         }
         Err(e) => {
             println!("with error: {}, use existing settings", e);
-            let res;
-            unsafe { res = DEVICE.get_existing_value() }
+            let res; unsafe { res = DEVICE.get_existing_value() }
             res
         }
     };
@@ -132,16 +141,18 @@ fn rocket() -> _ {
             println!("with error: {}, use default settings", e);
             unsafe {
                 DEVICE.start_wireguard_device();
+                println!("Start Success!");
                 DEVICE.init_ap().unwrap()
             }
         }
     }
 
+    println!("Start the rocket server");
     rocket::build()
         .mount("/", routes![index])
         .mount("/ping", routes![ping])
-        .mount("/update/config", routes![update_config])
         .mount("/update/reload", routes![reload_config])
+        .mount("/update/config", routes![update_config])
         .mount("/get/config", routes![get_config])
         .mount("/update/keypair",routes![gen_new_keypair])
 }
