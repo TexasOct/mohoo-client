@@ -13,6 +13,7 @@ SDK_GCC_VERSION := gcc-11.2.0_musl
 BUILD_DIR := $(if $(DIR),$(DIR),build)
 PROJECT_DIR := $(shell pwd)
 JSONC_DIR := $(shell pwd)/libjsonc
+ROCKET_CONFIG := ${PROJECT_DIR}/Rocket.toml
 ########
 # Global shortcuts
 WGET := wget -q --show-progress
@@ -54,7 +55,8 @@ cli_builder: ${BUILD_DIR}/${SDK_TOOLCHAIN}
 build_cli: # cli_builder
 # 	sudo dnf install gcc clang
 	STAGING_DIR=${STAGING_DIR} cargo build -Z build-std=std,panic_abort -Z build-std-features=panic_immediate_abort --release
-	cp ${PROJECT_DIR}/target/${RUST_TARGET}/release/${RUST_NAME} ${PROJECT_DIR}/${OPENWRT_FILES_DIR}/etc/root/
+	cp ${PROJECT_DIR}/target/${RUST_TARGET}/release/${RUST_NAME} ${PROJECT_DIR}/${OPENWRT_FILES_DIR}/etc/root/ -R
+	cp ${ROCKET_CONFIG} ${PROJECT_DIR}/${OPENWRT_FILES_DIR}/etc/root/ -R
 
 # 	ls ${BUILD_DIR}/${GCC_DIR}/bin/*
 
@@ -84,4 +86,4 @@ clean_all: clean
 	rm -rf "${BUILD_DIR}/${IMAGE_TOOLCHAIN}"
 
 
-.PHONY: build_cli build_openwrt image_builder cli_builder clean clean_all copy_result
+.PHONY: build_cli build_openwrt image_builder cli_builder clean clean_all copy_result cli_test

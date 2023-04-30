@@ -1,5 +1,5 @@
 use rust_uci::Uci;
-use crate::utils::{raw2str, str2raw};
+use crate::utils::raw2str;
 use std::error::Error;
 use std::net::{IpAddr, SocketAddr};
 use std::process::Command;
@@ -23,6 +23,7 @@ fn boot_wireguard_device(
     server_socket: &SocketAddr,
     server_pubkey: &Key,
 ) -> std::io::Result<()> {
+
     DeviceUpdate::new()
         .set_keypair(peer_keypair.clone())
         .replace_peers()
@@ -43,7 +44,7 @@ impl Peer {
             server_socket: server_socket
                 .parse()
                 .expect("Wrong socket address, please check again!"),
-            server_pubkey: Key::from_raw(str2raw(server_pubkey)),
+            server_pubkey: Key::from_base64(&*server_pubkey).unwrap(),
             peer_keypair,
             peer_ssid: String::from("mosquitto-ap"),
             peer_passwd: String::from("12345678"),
@@ -51,7 +52,7 @@ impl Peer {
     }
 
     pub fn update_server_pubkey(&mut self, key: String) {
-        self.server_pubkey = Key::from_raw(str2raw(key))
+        self.server_pubkey = Key::from_base64(&*key).unwrap()
     }
 
     pub fn update_server_socket(&mut self, socket: String) {
@@ -79,10 +80,11 @@ impl Peer {
 
     pub fn update_new_keypair(&mut self, private_key: String, _pubkey: String) {
         self.peer_keypair = KeyPair::from_private(
-            Key::from_raw(str2raw(private_key)));
+            Key::from_base64(&*private_key).unwrap());
     }
 
     pub fn init_ap(&self) -> Result<(), Box<dyn Error>> {
+        println!("Start ap init");
         let mut uci = Uci::new()?;
         uci.set("firewall.@zone[1].network", "wwan")?;
         uci.commit("firewall")?;
@@ -108,7 +110,8 @@ impl Peer {
     }
 
     pub fn start_wireguard_device(&self) {
-        delete_interface(&"mosquitto-wg".parse().unwrap()).expect("No wireguard Interface!");
+        println!("Start wg init");
+        //delete_interface(&"mosquitto-wg".parse().unwrap()).expect("No wireguard Interface!");
         boot_wireguard_device(
             &self.peer_ip,
             &self.peer_keypair,
@@ -155,5 +158,26 @@ impl Peer {
             "peer_passwd": peer_passwd
         });
         value
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::net::IpAddr;
+    use std::str::FromStr;
+    use serde_json::json;
+    use crate::operation::Peer;
+
+    #[test]
+    fn test_get_value() {
+       use crate::operation::Peer;
+       let peer =
+           Peer::init(
+               IpAddr::from_str("10.10.1.2").unwrap(),
+               "223.129.127.2:8889".to_string(),
+               "L9pVwwThBs1gGczwGsgUFXROFUkyTFoXEVp5MBkBbkc=".to_string()
+           );
+        println!("Get Value");
+        peer.get_existing_value();
     }
 }

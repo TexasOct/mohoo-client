@@ -1,23 +1,24 @@
 use std::process::exit;
+use std::str::from_utf8;
 
-pub fn str2raw(key: String) -> [u8; 32] {
-    let mut raw = [0; 32];
-    if key.len() > 32 || key.len() == 0 {
-        exit(-1)
-    }
-    for (tag, c) in key.chars().enumerate() {
-        raw[tag] = c as u8
-    }
-    raw
-}
+// pub fn str2raw(key: String) -> [u8; 32] {
+//     let key_bytes = key.as_bytes();
+//     if key_bytes.len() > 44 || key.is_empty() {
+//         exit(-1)
+//     }
+//
+//     let mut raw = [0;32];
+//     raw[..key_bytes.len()].copy_from_slice(key_bytes);
+//     raw
+// }
 
 pub fn raw2str(key: &[u8]) -> String {
-    let mut str = String::from("");
-    if key.len() > 32 || key.len() == 0 {
+    if key.len() > 44 || key.len() == 0 {
         exit(-1)
     }
-    for num in key.iter() {
-        str.push(*num as char)
+    let res = from_utf8(&key[..key.len()]).map(|s| s.to_string());
+    match res {
+        Ok(s) => s,
+        Err(_) => "null".to_string()
     }
-    str
 }

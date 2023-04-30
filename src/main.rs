@@ -11,14 +11,14 @@ use utils::raw2str;
 static mut DEVICE: Lazy<Peer> = Lazy::new(||{
     Peer::init(
         IpAddr::from_str("10.10.1.2").unwrap(),
-        "223.129.127.2".to_string(),
+        "223.129.127.2:8889".to_string(),
         "L9pVwwThBs1gGczwGsgUFXROFUkyTFoXEVp5MBkBbkc=".to_string()
     )
 });
 
 #[get("/")]
 fn index() -> &'static str {
-    ""
+    "hello"
 }
 
 #[get("/ping")]
@@ -28,7 +28,7 @@ fn ping() -> &'static str {
 
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
-struct Config {
+struct ConfigJson {
     peer_ip: String,
     server_socket: String,
     server_pubkey: String,
@@ -39,7 +39,7 @@ struct Config {
 }
 
 #[get("/get/config")]
-fn get_config() -> Json<Config> {
+fn get_config() -> Json<ConfigJson> {
     let answer = match std::fs::File::open("config.json") {
         Ok(mut file) => {
             let mut stdout = std::io::stdout();
@@ -54,7 +54,7 @@ fn get_config() -> Json<Config> {
         }
     };
 
-    Json(Config {
+    Json(ConfigJson {
         peer_ip: answer["peer_ip"].to_string(),
         server_socket: answer["server_socket"].to_string(),
         server_pubkey: answer["server_pubkey"].to_string(),
@@ -66,7 +66,7 @@ fn get_config() -> Json<Config> {
 }
 
 #[post("/update/config", format = "json", data = "<config>")]
-fn update_config(config: Json<Config>) -> &'static str {
+fn update_config(config: Json<ConfigJson>) -> &'static str {
     unsafe {
         DEVICE.update_peer_ip(
             IpAddr::from_str(&*config.peer_ip).unwrap());
@@ -112,7 +112,7 @@ fn reload_config() -> &'static str {
 }
 
 #[launch]
-fn rocket() -> _ {
+async fn rocket() -> _ {
     println!("Start to read config file to start the service");
     match std::fs::File::open("config.json") {
         Ok(mut file) => {
@@ -141,15 +141,12 @@ fn rocket() -> _ {
             println!("with error: {}, use default settings", e);
             unsafe {
                 DEVICE.start_wireguard_device();
-                println!("Start Success!");
-                DEVICE.init_ap().unwrap()
             }
         }
     }
 
-    println!("Start the rocket server");
     rocket::build()
-        .mount("/", routes![index])
+        .mount("/", routes![get_config])
         .mount("/ping", routes![ping])
         .mount("/update/reload", routes![reload_config])
         .mount("/update/config", routes![update_config])
