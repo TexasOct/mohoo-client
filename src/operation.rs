@@ -57,7 +57,6 @@ impl Peer {
     }
 
     pub fn update_peer_ip(&mut self, ip: IpAddr) {
-        println!("test");
         self.peer_ip = ip;
     }
 
