@@ -15,6 +15,10 @@ static mut DEVICE: Lazy<Peer> = Lazy::new(||{
     )
 });
 
+pub fn symbol_parse(src: String) -> String{
+    src[1..(src.len()-1)].to_string()
+}
+
 #[get("/")]
 fn index() -> &'static str {
     "hello"
@@ -24,6 +28,7 @@ fn index() -> &'static str {
 fn ping() -> &'static str {
     "pong!"
 }
+
 
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
@@ -39,12 +44,9 @@ struct ConfigJson {
 
 #[get("/get")]
 fn get_config() -> Json<ConfigJson> {
-    let answer = match std::fs::File::open("config.json") {
-        Ok(mut file) => {
-            let mut stdout = std::io::stdout();
-            let str = &std::io::copy(&mut file, &mut stdout).unwrap().to_string();
-            let data: serde_json::Value = serde_json::from_str(str).unwrap();
-            data
+    let answer = match std::fs::read_to_string("./config.json") {
+        Ok(str) => {
+            serde_json::from_str(&str).unwrap()
         }
         Err(e) => {
             println!("with error: {}, use existing settings", e);
@@ -84,6 +86,14 @@ fn update_config(config: Json<ConfigJson>) -> &'static str {
     "200"
 }
 
+#[post("/reload")]
+fn reload_config() -> &'static str {
+    unsafe {
+        DEVICE.overwrite_config()
+    }
+}
+
+
 #[derive(Serialize)]
 #[serde(crate = "rocket::serde")]
 struct KeyPairConfig {
@@ -103,52 +113,41 @@ fn gen_keypair() -> Json<KeyPairConfig> {
     })
 }
 
-#[post("/reload")]
-fn reload_config() -> &'static str {
-    unsafe {
-        DEVICE.overwrite_config()
-    }
-}
 
 #[launch]
 async fn rocket() -> _ {
     println!("Start to read config file to start the service");
-    match std::fs::File::open("config.json") {
-        Ok(mut file) => {
-            let mut stdout = std::io::stdout();
-            let str = &std::io::copy(&mut file, &mut stdout).unwrap().to_string();
-            let data: serde_json::Value = serde_json::from_str(str).unwrap();
+    match std::fs::read_to_string("./config.json") {
+        Ok(json) => {
+            println!("Fetched the file");
+            let data: serde_json::Value = serde_json::from_str(&json).unwrap();
             unsafe {
                 DEVICE.update_peer_ip(
-                    IpAddr::from_str(&data["peer_ip"].to_string()).unwrap(),);
+                    IpAddr::from_str(&symbol_parse(data["peer_ip"].to_string())).unwrap(),);
                 DEVICE.update_server_socket(
-                    data["server_socket"].to_string());
+                    symbol_parse(data["server_socket"].to_string()));
                 DEVICE.update_server_pubkey(
-                    data["server_pubkey"].to_string());
+                    symbol_parse(data["server_pubkey"].to_string()));
                 DEVICE.update_new_keypair(
-                    data["peer_private_key"].to_string(),
-                    data["peer_pubkey"].to_string());
+                    symbol_parse(data["peer_private_key"].to_string()),
+                    symbol_parse(data["peer_pubkey"].to_string()));
                 DEVICE.update_peer_ssid(
-                    data["peer_ssid"].to_string());
+                    symbol_parse(data["peer_ssid"].to_string()));
                 DEVICE.update_peer_passwd(
-                    data["peer_passwd"].to_string());
-                DEVICE.start_wireguard_device();
-                DEVICE.init_ap().unwrap()
+                    symbol_parse(data["peer_passwd"].to_string()));
+                DEVICE.start();
             }
         }
         Err(e) => {
             println!("with error: {}, use default settings", e);
             unsafe {
-                DEVICE.start_wireguard_device();
+                DEVICE.start();
             }
         }
     }
 
     rocket::build()
-        .mount("/", routes![index])
-        .mount("/", routes![ping])
-        .mount("/config", routes![reload_config])
-        .mount("/config", routes![update_config])
-        .mount("/config", routes![get_config])
+        .mount("/", routes![index, ping])
+        .mount("/config", routes![reload_config, update_config, get_config])
         .mount("/keypair",routes![gen_keypair])
 }

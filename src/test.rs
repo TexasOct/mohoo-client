@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod test {
     use wireguard_control::Key;
+    use crate::symbol_parse;
 
     #[test]
     fn test_get_value() {
@@ -25,5 +26,27 @@ mod test {
         let res = key.unwrap().to_base64();
 
         assert_eq!("QC+HObWWhTztQVVlEyimn7PlQEIpi8/7IKWb9r8n7Vc=", res)
+    }
+
+    #[test]
+    fn test_reader() {
+        match std::fs::File::open("./config.json") {
+            Ok(mut file) => {
+                let mut stdout = std::io::stdout();
+                let str = &std::io::copy(&mut file, &mut stdout).unwrap().to_string();
+                let data: serde_json::Value = serde_json::from_str(str).unwrap();
+            }
+            Err(e) => {
+                println!("with error: {}, use default settings", e);
+            }
+        }
+    }
+
+    #[test]
+    fn test_symbol_parse() {
+        use crate::symbol_parse;
+        let src = String::from("\"12345678\"");
+        let res = symbol_parse(src);
+        assert_eq!("12345678", res)
     }
 }

@@ -57,6 +57,7 @@ impl Peer {
     }
 
     pub fn update_peer_ip(&mut self, ip: IpAddr) {
+        println!("test");
         self.peer_ip = ip;
     }
 
@@ -106,10 +107,17 @@ impl Peer {
         Ok(())
     }
 
-    #[warn(dead_code)]
-    pub fn reload_ap(&self) ->  Result<(), Box<dyn Error>> {/*TODO*/ Ok(())}
+    pub fn reload_ap(&self) ->  Result<(), Box<dyn Error>> {
+        println!("AP reloading");
+        let mut uci = Uci::new()?;
+        uci.set("wireless.wwan.key", &self.peer_passwd)?;
+        uci.set("wireless.wwan.ssid", &self.peer_ssid)?;
+        uci.commit("wireless")?;
+        Command::new("wifi").arg("reload");
+        Ok(())
+    }
 
-    pub fn start_wireguard_device(&self) {
+    pub fn start(&self) {
         println!("Start wg init");
         //delete_interface(&"mosquitto-wg".parse().unwrap()).expect("No wireguard Interface!");
         boot_wireguard_device(
@@ -124,14 +132,20 @@ impl Peer {
 
     /// Rewrite the config file
     pub fn overwrite_config(&self) -> &'static str {
-        self.start_wireguard_device();
-        match self.init_ap() {
+        boot_wireguard_device(
+            &self.peer_ip,
+            &self.peer_keypair,
+            &self.server_socket,
+            &self.server_pubkey,
+        ).expect("Failed to build device!");
+        match self.reload_ap() {
             Ok(_) => {
                 let value = self.get_existing_value();
+                println!("start writing");
                 std::fs::write(
-                    "./",
-                    serde_json::to_string_pretty(&value).unwrap())
-                    .unwrap();
+                    "./config.json",
+                    serde_json::to_string_pretty(&value).unwrap()
+                ).unwrap();
                 "success!"
             },
             Err(_) => "failed"

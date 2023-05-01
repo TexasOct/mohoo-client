@@ -53,11 +53,9 @@ cli_builder: ${BUILD_DIR}/${SDK_TOOLCHAIN}
 
 
 build_cli: # cli_builder
-# 	sudo dnf install gcc clang
 	STAGING_DIR=${STAGING_DIR} cargo build -Z build-std=std,panic_abort -Z build-std-features=panic_immediate_abort --release
 	cp ${PROJECT_DIR}/target/${RUST_TARGET}/release/${RUST_NAME} ${PROJECT_DIR}/${OPENWRT_FILES_DIR}/etc/root/
 
-# 	ls ${BUILD_DIR}/${GCC_DIR}/bin/*
 
 build_openwrt: image_builder build_cli
 	make -C ${BUILD_DIR}/${IMAGE_TOOLCHAIN} \
