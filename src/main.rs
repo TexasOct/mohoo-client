@@ -1,12 +1,11 @@
 mod operation;
-mod utils;
+mod test;
 #[macro_use] extern crate rocket;
 use std::{net::IpAddr, str::FromStr};
 use operation::Peer;
 use rocket::serde::{json::Json, Serialize, Deserialize};
 use once_cell::sync::Lazy;
 use serde_json;
-use utils::raw2str;
 
 static mut DEVICE: Lazy<Peer> = Lazy::new(||{
     Peer::init(
@@ -38,7 +37,7 @@ struct ConfigJson {
     peer_passwd: String,
 }
 
-#[get("/get/config")]
+#[get("/get")]
 fn get_config() -> Json<ConfigJson> {
     let answer = match std::fs::File::open("config.json") {
         Ok(mut file) => {
@@ -58,14 +57,14 @@ fn get_config() -> Json<ConfigJson> {
         peer_ip: answer["peer_ip"].to_string(),
         server_socket: answer["server_socket"].to_string(),
         server_pubkey: answer["server_pubkey"].to_string(),
-        peer_private_key: answer["server_private_key"].to_string(),
-        peer_pubkey: answer["server_pubkey"].to_string(),
+        peer_private_key: answer["peer_private_key"].to_string(),
+        peer_pubkey: answer["peer_pubkey"].to_string(),
         peer_ssid: answer["peer_ssid"].to_string(),
         peer_passwd: answer["peer_passwd"].to_string(),
     })
 }
 
-#[post("/update/config", format = "json", data = "<config>")]
+#[post("/update", format = "json", data = "<config>")]
 fn update_config(config: Json<ConfigJson>) -> &'static str {
     unsafe {
         DEVICE.update_peer_ip(
@@ -92,19 +91,19 @@ struct KeyPairConfig {
     private_key: String
 }
 
-#[post("/update/config")]
-fn gen_new_keypair() -> Json<KeyPairConfig> {
+#[post("/gen")]
+fn gen_keypair() -> Json<KeyPairConfig> {
     let keypair;
     unsafe{
         keypair = DEVICE.generate_new_key();
     }
     Json(KeyPairConfig{
-        pubkey: raw2str(keypair.public.as_bytes()),
-        private_key: raw2str(keypair.private.as_bytes()),
+        pubkey: keypair.public.to_base64(),
+        private_key: keypair.private.to_base64(),
     })
 }
 
-#[post("/update/reload")]
+#[post("/reload")]
 fn reload_config() -> &'static str {
     unsafe {
         DEVICE.overwrite_config()
@@ -146,10 +145,10 @@ async fn rocket() -> _ {
     }
 
     rocket::build()
-        .mount("/", routes![get_config])
-        .mount("/ping", routes![ping])
-        .mount("/update/reload", routes![reload_config])
-        .mount("/update/config", routes![update_config])
-        .mount("/get/config", routes![get_config])
-        .mount("/update/keypair",routes![gen_new_keypair])
+        .mount("/", routes![index])
+        .mount("/", routes![ping])
+        .mount("/config", routes![reload_config])
+        .mount("/config", routes![update_config])
+        .mount("/config", routes![get_config])
+        .mount("/keypair",routes![gen_keypair])
 }

@@ -1,10 +1,7 @@
 use rust_uci::Uci;
-use crate::utils::raw2str;
 use std::error::Error;
 use std::net::{IpAddr, SocketAddr};
 use std::process::Command;
-use std::string::ToString;
-use wireguard_control::backends::kernel::delete_interface;
 use wireguard_control::{Backend, DeviceUpdate, Key, KeyPair};
 use serde_json::{json, Value};
 
@@ -109,6 +106,9 @@ impl Peer {
         Ok(())
     }
 
+    #[warn(dead_code)]
+    pub fn reload_ap(&self) ->  Result<(), Box<dyn Error>> {/*TODO*/ Ok(())}
+
     pub fn start_wireguard_device(&self) {
         println!("Start wg init");
         //delete_interface(&"mosquitto-wg".parse().unwrap()).expect("No wireguard Interface!");
@@ -140,13 +140,13 @@ impl Peer {
 
     /// read value from ram
     pub fn get_existing_value(&self) -> Value {
-        let peer_ip = self.peer_ip.to_string();
-        let server_socket = self.server_socket.to_string();
-        let server_pubkey = raw2str(self.server_pubkey.as_bytes());
-        let peer_private_key = raw2str(self.peer_keypair.private.as_bytes());
-        let peer_pubkey = raw2str(self.peer_keypair.public.as_bytes());
-        let peer_ssid = self.peer_ssid.clone();
-        let peer_passwd = self.peer_passwd.clone();
+        let peer_ip = self.peer_ip;
+        let server_socket = self.server_socket;
+        let server_pubkey = self.server_pubkey.to_base64();
+        let peer_private_key = self.peer_keypair.private.to_base64();
+        let peer_pubkey = self.peer_keypair.public.to_base64();
+        let peer_ssid = &self.peer_ssid;
+        let peer_passwd = &self.peer_passwd;
 
         let value: Value = json!({
             "peer_ip": peer_ip,
@@ -158,26 +158,5 @@ impl Peer {
             "peer_passwd": peer_passwd
         });
         value
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use std::net::IpAddr;
-    use std::str::FromStr;
-    use serde_json::json;
-    use crate::operation::Peer;
-
-    #[test]
-    fn test_get_value() {
-       use crate::operation::Peer;
-       let peer =
-           Peer::init(
-               IpAddr::from_str("10.10.1.2").unwrap(),
-               "223.129.127.2:8889".to_string(),
-               "L9pVwwThBs1gGczwGsgUFXROFUkyTFoXEVp5MBkBbkc=".to_string()
-           );
-        println!("Get Value");
-        peer.get_existing_value();
     }
 }
