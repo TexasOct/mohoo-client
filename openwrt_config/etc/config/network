@@ -41,20 +41,6 @@ config switch_vlan
 	option vlan '2'
 	option ports '0 6t'
 
-config interface 'mohoo'
-	option proto 'wireguard'
-	option private_key 'oN6aex0nJtLNTPA/WZG8Z0yOIEFJ555JPUrwz7RkmkA='
-	list addresses '10.20.93.253'
-	option auto '0'
-
-config wireguard_mohoo 'wgserver'
-	option route_allowed_ips '1'
-	option persistent_keepalive '25'
-	option endpoint_host '223.129.127.10'
-	option endpoint_port '53'
-	option public_key 'tjJXdU4ritnxYMhP7piKr1IsgiajLQymt3PyAaXtRCE='
-	list allowed_ips '0.0.0.0/0'
-
 config interface 'sta0'
 	option proto 'dhcp'
 	option device 'sta0'

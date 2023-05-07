@@ -9,8 +9,8 @@ use serde_json;
 
 static mut DEVICE: Lazy<Peer> = Lazy::new(||{
     Peer::init(
-        IpAddr::from_str("10.10.1.2").unwrap(),
-        "223.129.127.2:8889".to_string(),
+        IpAddr::from_str("10.20.93.100").unwrap(),
+        "223.129.127.10:53".to_string(),
         "L9pVwwThBs1gGczwGsgUFXROFUkyTFoXEVp5MBkBbkc=".to_string()
     )
 });

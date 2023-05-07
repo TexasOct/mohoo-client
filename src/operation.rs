@@ -20,7 +20,6 @@ fn boot_wireguard_device(
     server_socket: &SocketAddr,
     server_pubkey: &Key,
 ) -> std::io::Result<()> {
-
     DeviceUpdate::new()
         .set_keypair(peer_keypair.clone())
         .replace_peers()
@@ -43,7 +42,7 @@ impl Peer {
                 .expect("Wrong socket address, please check again!"),
             server_pubkey: Key::from_base64(&*server_pubkey).unwrap(),
             peer_keypair,
-            peer_ssid: String::from("mosquitto-ap"),
+            peer_ssid: String::from("mohoo-ap"),
             peer_passwd: String::from("12345678"),
         }
     }
@@ -97,12 +96,12 @@ impl Peer {
         uci.set("wireless.wwan.device", "radio0")?;
         uci.set("wireless.wwan.network", "wlan")?;
         uci.set("wireless.wwan.mode", "sta")?;
-        uci.set("wireless.wwan.encryption", "none")?;
+        uci.set("wireless.wwan.encryption", "wpa2")?;
         uci.set("wireless.wwan.key", &self.peer_passwd)?;
         uci.set("wireless.wwan.ssid", &self.peer_ssid)?;
         uci.commit("wireless")?;
-        Command::new("wifi").arg("reload");
-
+        Command::new("wifi").arg("down");
+        Command::new("wifi").arg("up");
         Ok(())
     }
 

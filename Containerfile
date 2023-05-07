@@ -3,7 +3,7 @@ FROM docker.io/library/fedora:37
 # Prepare Fedora environment pkg
 RUN dnf install -y clang cmake wget gcc g++ git gawk gettext ncurses-devel zlib-devel \
     openssl-devel libxslt wget which @c-development @development-tools \
-    @development-libs zlib-static which python3 make libstdc++-devel.i686 glibc-devel.i686
+    @development-libs zlib-static which python3 make libstdc++-devel.i686 glibc-devel.i686 upx
 
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
