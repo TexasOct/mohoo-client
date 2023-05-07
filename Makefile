@@ -43,7 +43,7 @@ ${BUILD_DIR}/${SDK_TOOLCHAIN_FILENAME}:
 
 ${BUILD_DIR}/${SDK_TOOLCHAIN}: ${BUILD_DIR}/${SDK_TOOLCHAIN_FILENAME}
 	tar -xf ${BUILD_DIR}/${SDK_TOOLCHAIN_FILENAME} -C ${BUILD_DIR}
-
+	rename mipsel-openwrt-linux-musl mipsel-linux-musl ${BUILD_DIR}/${GCC_DIR}/bin/*
 
 image_builder: ${BUILD_DIR}/${IMAGE_TOOLCHAIN}
 
@@ -52,10 +52,10 @@ cli_builder: ${BUILD_DIR}/${SDK_TOOLCHAIN}
 	cp ${JSONC_DIR}/* ${BUILD_DIR}/${GCC_DIR}/lib
 
 
-build_cli: # cli_builder
+build_cli: cli_builder
 	STAGING_DIR=${STAGING_DIR} cargo build -Z build-std=std,panic_abort -Z build-std-features=panic_immediate_abort --release
 	cp ${PROJECT_DIR}/target/${RUST_TARGET}/release/${RUST_NAME} ${PROJECT_DIR}/${OPENWRT_FILES_DIR}/etc/root/
-
+	upx ${PROJECT_DIR}/${OPENWRT_FILES_DIR}/etc/root/${RUST_NAME}
 
 build_openwrt: image_builder build_cli
 	make -C ${BUILD_DIR}/${IMAGE_TOOLCHAIN} \
@@ -81,6 +81,9 @@ clean:
 clean_all: clean
 	rm -f "${BUILD_DIR}/${IMAGE_TOOLCHAIN_FILENAME}"
 	rm -rf "${BUILD_DIR}/${IMAGE_TOOLCHAIN}"
+	rm -f "${BUILD_DIR}/${SDK_TOOLCHAIN_FILENAME}"
+	rm -rf "${BUILD_DIR}/${SDK_TOOLCHAIN}"
+
 
 
 .PHONY: build_cli build_openwrt image_builder cli_builder clean clean_all copy_result cli_test

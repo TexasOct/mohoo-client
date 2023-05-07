@@ -19,6 +19,7 @@ wirguard-control 提供abi级别的wireguard交互
 run the container file environments and build in it 
 ```shell
 cd mohoo-client
+mkdir build
 podman build -t mohoo-client .
 podman run --rm -it -v $(pwd):/mnt:z -w /mnt localhost/mohoo-build:latest  bash # option z with SElinux
 make all
