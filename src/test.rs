@@ -14,7 +14,6 @@ mod test {
                 "223.129.127.2:8889".to_string(),
                 "L9pVwwThBs1gGczwGsgUFXROFUkyTFoXEVp5MBkBbkc=".to_string()
             );
-
         println!("{:?}",peer.get_existing_value());
     }
 
@@ -22,9 +21,7 @@ mod test {
     fn test_to_base64() {
         use wireguard_control::Key;
         let key = Key::from_base64("QC+HObWWhTztQVVlEyimn7PlQEIpi8/7IKWb9r8n7Vc=");
-
         let res = key.unwrap().to_base64();
-
         assert_eq!("QC+HObWWhTztQVVlEyimn7PlQEIpi8/7IKWb9r8n7Vc=", res)
     }
 

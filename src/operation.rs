@@ -1,9 +1,9 @@
 use rust_uci::Uci;
+use serde_json::{json, Value};
 use std::error::Error;
 use std::net::{IpAddr, SocketAddr};
 use std::process::Command;
 use wireguard_control::{Backend, DeviceUpdate, Key, KeyPair};
-use serde_json::{json, Value};
 
 pub struct Peer {
     peer_ip: IpAddr,
@@ -12,23 +12,6 @@ pub struct Peer {
     peer_keypair: KeyPair,
     peer_ssid: String,
     peer_passwd: String,
-}
-
-fn boot_wireguard_device(
-    peer_ip: &IpAddr,
-    peer_keypair: &KeyPair,
-    server_socket: &SocketAddr,
-    server_pubkey: &Key,
-) -> std::io::Result<()> {
-    DeviceUpdate::new()
-        .set_keypair(peer_keypair.clone())
-        .replace_peers()
-        .add_peer_with(server_pubkey, |peer| {
-            peer.set_endpoint(server_socket.clone())
-                .replace_allowed_ips()
-                .add_allowed_ip(peer_ip.clone(), 0)
-        })
-        .apply(&"mosquitto-wg".parse().unwrap(), Backend::Kernel)
 }
 
 impl Peer {
@@ -74,9 +57,19 @@ impl Peer {
         new_keypair
     }
 
-    pub fn update_new_keypair(&mut self, private_key: String, _pubkey: String) {
-        self.peer_keypair = KeyPair::from_private(
-            Key::from_base64(&*private_key).unwrap());
+    pub fn update_new_keypair(&mut self, private_key: String, pubkey: String) {
+        let pub_key = Key::from_base64(pubkey.as_str());
+        match pub_key {
+            Ok(value)=> {
+                self.peer_keypair = KeyPair {
+                    private: Key::from_base64(private_key.as_str()).unwrap(),
+                    public: value,
+                }
+            }
+            Err(_) => {
+                self.peer_keypair = KeyPair::from_private(Key::from_base64(&*private_key).unwrap());
+            }
+        }
     }
 
     pub fn init_ap(&self) -> Result<(), Box<dyn Error>> {
@@ -105,7 +98,8 @@ impl Peer {
         Ok(())
     }
 
-    pub fn reload_ap(&self) ->  Result<(), Box<dyn Error>> {
+
+    pub fn reload_ap(&self) -> Result<(), Box<dyn Error>> {
         println!("AP reloading");
         let mut uci = Uci::new()?;
         uci.set("wireless.wwan.key", &self.peer_passwd)?;
@@ -115,60 +109,59 @@ impl Peer {
         Ok(())
     }
 
+
     pub fn start(&self) {
         println!("Start wg init");
-        //delete_interface(&"mosquitto-wg".parse().unwrap()).expect("No wireguard Interface!");
-        boot_wireguard_device(
-            &self.peer_ip,
-            &self.peer_keypair,
-            &self.server_socket,
-            &self.server_pubkey,
-        ).expect("Failed to build device!");
+        self.boot_wireguard_device()
+        .expect("Failed to build device!");
         self.init_ap().expect("Failed to start ap!");
         println!("update wireguard device success!")
     }
 
+
     /// Rewrite the config file
     pub fn overwrite_config(&self) -> &'static str {
-        boot_wireguard_device(
-            &self.peer_ip,
-            &self.peer_keypair,
-            &self.server_socket,
-            &self.server_pubkey,
-        ).expect("Failed to build device!");
+        self.boot_wireguard_device()
+        .expect("Failed to build device!");
+
         match self.reload_ap() {
             Ok(_) => {
                 let value = self.get_existing_value();
                 println!("start writing");
                 std::fs::write(
                     "./config.json",
-                    serde_json::to_string_pretty(&value).unwrap()
+                    serde_json::to_string_pretty(&value).unwrap(),
                 ).unwrap();
                 "success!"
-            },
-            Err(_) => "failed"
+            }
+            Err(_) => "failed",
         }
     }
 
+
+    fn boot_wireguard_device( &self, ) -> std::io::Result<()> {
+        DeviceUpdate::new()
+            .set_keypair(self.peer_keypair.clone())
+            .replace_peers()
+            .add_peer_with(&self.server_pubkey, |peer| {
+                peer.set_endpoint(self.server_socket.clone())
+                    .replace_allowed_ips()
+                    .add_allowed_ip(self.peer_ip.clone(), 0)
+            })
+            .apply(&"mosquitto-wg".parse().unwrap(), Backend::Kernel)
+    }
+
+
     /// read value from ram
     pub fn get_existing_value(&self) -> Value {
-        let peer_ip = self.peer_ip;
-        let server_socket = self.server_socket;
-        let server_pubkey = self.server_pubkey.to_base64();
-        let peer_private_key = self.peer_keypair.private.to_base64();
-        let peer_pubkey = self.peer_keypair.public.to_base64();
-        let peer_ssid = &self.peer_ssid;
-        let peer_passwd = &self.peer_passwd;
-
-        let value: Value = json!({
-            "peer_ip": peer_ip,
-            "server_socket": server_socket,
-            "server_pubkey": server_pubkey,
-            "peer_private_key": peer_private_key,
-            "peer_pubkey": peer_pubkey,
-            "peer_ssid": peer_ssid,
-            "peer_passwd": peer_passwd
-        });
-        value
+        json!({
+            "peer_ip": self.peer_ip,
+            "server_socket": self.server_socket,
+            "server_pubkey": self.server_pubkey.to_base64(),
+            "peer_private_key": self.peer_keypair.private.to_base64(),
+            "peer_pubkey": self.peer_keypair.public.to_base64(),
+            "peer_ssid": &self.peer_ssid,
+            "peer_passwd": &self.peer_passwd
+        })
     }
 }
